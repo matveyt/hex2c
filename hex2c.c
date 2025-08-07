@@ -135,6 +135,8 @@ static int hex_parse(CHUNK* pc, char line[])
     // cut trailing newline
     if (line[length - 1] == '\n')
         --length;
+    if (line[length - 1] == '\r')
+        --length;
 
     // check formatting
     if (length < MIN_LINE || line[0] != ':' || (length & 1) == 0)
@@ -185,7 +187,7 @@ static size_t load_hex(uint8_t** bin, FILE* f)
     *bin = xmalloc(MAX_ADDRESS + 1);
 
     size_t sz = 0, lineno = 0;
-    char line[MAX_LINE + 2];    // LF + NUL
+    char line[MAX_LINE + 3];    // CR+LF+NUL
     CHUNK chunk;
 
     while (fgets(line, sizeof(line), f) != NULL) {
