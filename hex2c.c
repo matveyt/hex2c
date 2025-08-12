@@ -7,6 +7,7 @@
 // https://github.com/matveyt/hex2c
 //
 
+#define _DEFAULT_SOURCE
 #include <ctype.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -299,8 +300,7 @@ int main(int argc, char* argv[])
         break;
         case 'o':
             free(output);
-            //output = strdup(optarg);
-            output = strcpy(xmalloc(strlen(optarg) + 1), optarg);
+            output = strdup(optarg);
         break;
         case 'p':
             o_padding = strtoul(optarg, NULL, 0);
