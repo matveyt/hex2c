@@ -22,11 +22,11 @@
 #endif // _WIN32
 
 // HEX format
-#define MAX_ADDRESS UINT16_MAX
+#define MAX_SIZE    (UINT16_MAX + 1)
 #define MIN_LINE    11  // colon(1) count(2) address(4) type(2) checksum(2)
 #define MAX_LINE    (MIN_LINE + 2 * UINT8_MAX)
 
-static const char program_name[] = "hex2c";
+const char program_name[] = "hex2c";
 
 // user options
 unsigned o_padding = 0;
@@ -111,7 +111,7 @@ static inline unsigned hex_scan16(char line[])
 
 // parsed data chunk
 typedef struct {
-    uint8_t data[UINT8_MAX];
+    uint8_t data[UINT8_MAX + 1];    // checksum
     unsigned length;
     size_t address;
 } CHUNK;
@@ -146,15 +146,14 @@ int hex_parse(CHUNK* pc, char line[])
     unsigned count = hex_scan8(&line[1]);
     unsigned address = hex_scan16(&line[3]);
     unsigned type = hex_scan8(&line[7]);
-    if (MIN_LINE + 2 * count != length || address + count > MAX_ADDRESS + 1)
+    if (length - 2 * count != MIN_LINE || address + count > MAX_SIZE)
         return -1;
 
     // get data and checksum
-    unsigned sum = count + (address >> 8) + address + type
-        + hex_scan8(&line[length - 2]);
-    for (unsigned cb = 0, i = 9; i < length - 2; i += 2) {
-        unsigned t = hex_scan8(&line[i]);
-        pc->data[cb++] = t;
+    unsigned sum = count + (address >> 8) + address + type;
+    for (unsigned i = 0, j = 9; i <= count; ++i, j += 2) {
+        unsigned t = hex_scan8(&line[j]);
+        pc->data[i] = t;
         sum += t;
     }
     // checksum mismatch
@@ -170,7 +169,7 @@ int hex_parse(CHUNK* pc, char line[])
 // return image size or 0
 size_t load_hex(uint8_t** bin, FILE* f)
 {
-    *bin = memset(xmalloc(MAX_ADDRESS + 1), UINT8_MAX, MAX_ADDRESS + 1);
+    *bin = memset(xmalloc(MAX_SIZE), UINT8_MAX, MAX_SIZE);
     size_t sz = 0;
 
     bool found_eof = false;
@@ -184,7 +183,7 @@ size_t load_hex(uint8_t** bin, FILE* f)
         CHUNK chunk;
         switch (hex_parse(&chunk, line)) {
         case 0:
-            // hex_parse() ensures that we never get past MAX_ADDRESS
+            // hex_parse() ensures that we never get past MAX_SIZE
             memcpy(*bin + chunk.address, chunk.data, chunk.length);
             sz = xmax(sz, chunk.address + chunk.length);
         break;
@@ -215,7 +214,7 @@ size_t load_hex(uint8_t** bin, FILE* f)
 void dump_hex(uint8_t data[], size_t sz, FILE* f)
 {
     // 64KB max
-    sz = xmin(sz, MAX_ADDRESS + 1);
+    sz = xmin(sz, MAX_SIZE);
     // user options
     unsigned wrap = (o_wrap != 0) ? o_wrap : 16;
 
