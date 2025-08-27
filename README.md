@@ -12,16 +12,14 @@ Run `make`.
 Usage: hex2c [OPTION]... FILE
 Convert between Intel HEX, Binary and C Include format.
 
--B, --from-binary   FILE has no specific format
--H, --from-hex      FILE has Intel HEX format [default]
 -b, --binary        Binary dump output
--c, --c             C Include output [default]
--h, --hex           Intel HEX format output
--o, --output=FILE   set output file name
--p, --padding=NUM   extra space on line
--s, --silent        suppress messages
--w, --wrap=NUM      maximum output bytes per line
+-c, --c             C Include output
+-x, --hex           Intel HEX format output
+-o, --output=FILE   Set output file name
+-p, --padding=NUM   Extra space on line
+-w, --wrap=NUM      Maximum output bytes per line
+-h, --help          Show this message and exit
 
-If no --output is given then writes to stdout.
+If no output is given then writes to stdout.
 Intel HEX format is 8-bit only (64KB max).
 ```
