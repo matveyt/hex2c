@@ -15,10 +15,10 @@ typedef struct {
     size_t address;
 } CHUNK;
 
-// print warning message
+// print annoying message
 static void warn(unsigned lineno, const char* what)
 {
-    fprintf(stderr, "Warning: %s on line %u\n", what, lineno);
+    fprintf(stderr, "ihex: %s on line %u\n", what, lineno);
 }
 
 // parse one record
@@ -49,20 +49,20 @@ static int parse_record(CHUNK* pc, char* line)
 
     // convert line to byte array
     uint8_t blob[MAX_BYTES];
-    size_t blobsize = ihex_blob(blob, MAX_BYTES, &line[1]);
-    if (blobsize != (length - 1) / 2)
+    size_t bloblen = ihex_blob(blob, MAX_BYTES, &line[1]);
+    if (bloblen != (length - 1) / 2)
         return -1;
 
     // get count, address and type
     unsigned count = blob[0];
     unsigned address = (blob[1] << 8) + (blob[2]);
     unsigned type = blob[3];
-    if (count != blobsize - MIN_BYTES || address + count > MAX_IMAGE)
+    if (count != bloblen - MIN_BYTES || address + count > MAX_IMAGE)
         return -1;
 
     // verify checksum
     uint8_t sum = 0;
-    for (size_t i = 0; i < blobsize; ++i)
+    for (size_t i = 0; i < bloblen; ++i)
         sum += blob[i];
     if (sum != 0)
         return -1;
@@ -165,12 +165,12 @@ static int ch2num(int ch)
 
 // convert hex string to byte array
 // return number of bytes converted
-size_t ihex_blob(uint8_t* blob, size_t length, const char* str)
+size_t ihex_blob(uint8_t* blob, size_t sz, const char* str)
 {
-    for (size_t i = 0, j = 0; i < length; ++i, j += 2) {
+    for (size_t i = 0, j = 0; i < sz; ++i, j += 2) {
         if (!isxdigit(str[j]) || !isxdigit(str[j + 1]))
             return i;
         blob[i] = (ch2num(str[j]) << 4) | ch2num(str[j + 1]);
     }
-    return length;
+    return sz;
 }

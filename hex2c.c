@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
     uint8_t* image = ihex_load8(&sz, &base, &entry, fin);
     if (image == NULL) {
         errno = ENOEXEC;
-        z_die("ihex_load8");
+        z_die("ihex");
     }
 
     // write out

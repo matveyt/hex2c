@@ -1,13 +1,9 @@
 #include "stdz.h"
-#include <errno.h>
 
 /*noreturn*/
 void z_die(const char* where)
 {
-    if (errno)
-        perror(where);
-    else
-        fprintf(stderr, "%s: Unspecified error\n", where);
+    perror(where);
     exit(EXIT_FAILURE);
 }
 
@@ -29,11 +25,8 @@ void* z_malloc(size_t size)
 
 void* z_realloc(void* ptr, size_t size)
 {
-    if (size == 0) {
-        free(ptr);
-        return NULL;
-    }
-
+    if (size == 0)
+        return free(ptr), NULL;
     ptr = realloc(ptr, size);
     if (ptr == NULL)
         z_die("realloc");
