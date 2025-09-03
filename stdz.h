@@ -16,3 +16,4 @@ FILE* z_fopen(const char* fname, const char* mode);
 void* z_malloc(size_t size);
 void* z_realloc(void* ptr, size_t size);
 char* z_strdup(const char* str);
+char* z_strerror_r(int errnum, char* buf, size_t n);

@@ -8,10 +8,9 @@
 //
 
 #include "stdz.h"
-#include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #if defined(_WIN32)
-#include <fcntl.h>
 #include <io.h>
 #endif // _WIN32
 #include "ihex.h"
@@ -170,23 +169,20 @@ int main(int argc, char* argv[])
     // open files
     FILE* fin = z_fopen(opt.input, "rb");
     FILE* fout = (opt.output == NULL || strcmp(opt.output, "-") == 0) ?
-        stdout : z_fopen(opt.output, (opt.fmt == 'b') ? "wb" : "w");
+        stdout : z_fopen(opt.output, "w");
 
     // read in
     size_t sz, base, entry;
     uint8_t* image = ihex_load8(&sz, &base, &entry, fin);
-    if (image == NULL) {
-        errno = ENOEXEC;
+    if (image == NULL)
         z_die("ihex");
-    }
 
     // write out
     switch (opt.fmt) {
     case 'b':
-#if defined(_WIN32)
-        if (fout == stdout)
-            _setmode(1/*STDOUT_FILENO*/, _O_BINARY);
-#endif // _WIN32
+#if defined(_O_BINARY)
+        _setmode(_fileno(fout), _O_BINARY);
+#endif // _O_BINARY
         if (fwrite(image, 1, sz, fout) != sz)
             z_die("fwrite");
     break;
