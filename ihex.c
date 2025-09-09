@@ -1,6 +1,5 @@
 #include "ihex.h"
 #include "stdz.h"
-#include <ctype.h>
 
 #define MAX_IMAGE   (UINT16_MAX + 1)
 #define MIN_BYTES   5
@@ -150,17 +149,22 @@ uint8_t* ihex_load8(size_t* sz, size_t* base, size_t* entry, FILE* f)
     return z_realloc(image, *sz);
 }
 
-// convert char to number
-static int ch2num(int ch)
+// convert char to hex number
+static int char2hex(int ch)
 {
-    //assert(isxdigit(ch));
+    if (ch < '0')
+        return -1;
     if (ch <= '9')
-        ch -= '0';
-    else if (ch <= 'F')
-        ch -= 'A' - 10;
-    else /*if (ch <= 'f')*/
-        ch -= 'a' - 10;
-    return ch;
+        return ch - '0';
+    if (ch < 'A')
+        return -1;
+    if (ch <= 'F')
+        return ch - 'A' + 10;
+    if (ch < 'a')
+        return -1;
+    if (ch <= 'f')
+        return ch - 'a' + 10;
+    return -1;
 }
 
 // convert hex string to byte array
@@ -168,9 +172,11 @@ static int ch2num(int ch)
 size_t ihex_blob(uint8_t* blob, size_t sz, const char* str)
 {
     for (size_t i = 0, j = 0; i < sz; ++i, j += 2) {
-        if (!isxdigit(str[j]) || !isxdigit(str[j + 1]))
+        int hi = char2hex(str[j]);
+        int lo = char2hex(str[j + 1]);
+        if (hi < 0 || lo < 0)
             return i;
-        blob[i] = (ch2num(str[j]) << 4) | ch2num(str[j + 1]);
+        blob[i] = (hi << 4) | lo;
     }
     return sz;
 }
