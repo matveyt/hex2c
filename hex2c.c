@@ -19,11 +19,11 @@ const char program_name[] = "hex2c";
 
 // user options
 struct {
+    char* input;
+    char* output;
     int fmt;
     unsigned padding;
     unsigned wrap;
-    char* input;
-    char* output;
 } opt = {0};
 
 /*noreturn*/
@@ -73,12 +73,12 @@ void parse_args(int argc, char* argv[])
             opt.output = z_strdup(optarg);
         break;
         case 'p':
-            opt.padding = strtoul(optarg, NULL, 0);
+            opt.padding = strtoul(optarg, NULL, 10);
             if (opt.padding > UINT8_MAX)
                 opt.padding = 0;
         break;
         case 'w':
-            opt.wrap = strtoul(optarg, NULL, 0);
+            opt.wrap = strtoul(optarg, NULL, 10);
             if (opt.wrap > UINT8_MAX)
                 opt.wrap = 0;
         break;
