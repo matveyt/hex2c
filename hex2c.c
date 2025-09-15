@@ -2,7 +2,6 @@
 // hex2c
 //
 // Convert between Intel HEX, Binary and C Include format
-// Maximum image size is 64KB
 //
 // https://github.com/matveyt/hex2c
 //
@@ -13,7 +12,7 @@
 #if defined(_WIN32)
 #include <io.h>
 #endif // _WIN32
-#include "ihex.h"
+#include "ihx.h"
 
 const char program_name[] = "hex2c";
 
@@ -21,7 +20,8 @@ const char program_name[] = "hex2c";
 struct {
     char* input;
     char* output;
-    int fmt;
+    int fmt_out;
+    unsigned filler;
     unsigned padding;
     unsigned wrap;
 } opt = {0};
@@ -36,13 +36,14 @@ void help(void)
 "-b, --binary       Binary dump output\n"
 "-c, --c            C Include output\n"
 "-x, --hex          Intel HEX format output\n"
+"-i, --info         Only show file info\n"
 "-o, --output=FILE  Set output file name\n"
+"-z, --filler=XX    Suppress consecutive bytes in output\n"
 "-p, --padding=NUM  Extra space on line\n"
 "-w, --wrap=NUM     Maximum output bytes per line\n"
 "-h, --help         Show this message and exit\n"
 "\n"
-"If no output is given then writes to stdout.\n"
-"Intel HEX format is 8-bit only (64KB max).\n",
+"If no output is given then writes to stdout.\n",
         program_name);
     exit(EXIT_SUCCESS);
 }
@@ -53,7 +54,9 @@ void parse_args(int argc, char* argv[])
         { "binary", no_argument, NULL, 'b' },
         { "c", no_argument, NULL, 'c' },
         { "hex", no_argument, NULL, 'x' },
+        { "info", no_argument, NULL, 'i' },
         { "output", required_argument, NULL, 'o' },
+        { "filler", optional_argument, NULL, 'z' },
         { "padding", required_argument, NULL, 'p' },
         { "wrap", required_argument, NULL, 'w' },
         { "help", no_argument, NULL, 'h'},
@@ -61,16 +64,20 @@ void parse_args(int argc, char* argv[])
     };
 
     int c;
-    while ((c = getopt_long(argc, argv, "bcxo:p:w:h", lopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "bcxio:z::p:w:h", lopts, NULL)) != -1) {
         switch (c) {
         case 'b':
         case 'c':
         case 'x':
-            opt.fmt = c;
+        case 'i':
+            opt.fmt_out = c;
         break;
         case 'o':
             free(opt.output);
             opt.output = z_strdup(optarg);
+        break;
+        case 'z':
+            opt.filler = optarg ? strtoul(optarg, NULL, 16) : UINT8_MAX;
         break;
         case 'p':
             opt.padding = strtoul(optarg, NULL, 10);
@@ -98,49 +105,18 @@ void parse_args(int argc, char* argv[])
         help();
 }
 
-// format output as Intel HEX file
-void dump_hex(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
-{
-    // user options
-    unsigned wrap = (opt.wrap != 0) ? opt.wrap : 16;
-
-    for (size_t i = 0; i < sz; i += wrap) {
-        unsigned cb = min(wrap, sz - i);
-        // : count address type(00)
-        fprintf(f, ":%02X%04zX00", cb, base + i);
-        unsigned sum = cb + (base >> 8) + base + (i >> 8) + i;
-        // data
-        for (unsigned j = 0; j < cb; ++j) {
-            fprintf(f, "%02X", image[i + j]);
-            sum += image[i + j];
-        }
-        // checksum
-        fprintf(f, "%02X\n", (uint8_t)(-sum));
-    }
-
-    if (entry > 0) {
-        unsigned hi = (uint8_t)(entry >> 8);
-        unsigned lo = (uint8_t)(entry);
-        unsigned sum = 4 + 3 + hi + lo;
-        fprintf(f, ":040000030000%02X%02X%02X\n", hi, lo, (uint8_t)(-sum));
-    }
-
-    // EOF record
-    fputs(":00000001FF\n", f);
-}
-
 // format output as C Include
-void dump_c(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
+void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
 {
     // user options
-    unsigned wrap = (opt.wrap != 0) ? opt.wrap : 8;
-    unsigned padding = (opt.padding != 0) ? opt.padding : 4;
+    unsigned wrap = opt.wrap ? opt.wrap : 8;
+    unsigned padding = opt.padding ? opt.padding : 4;
 
     // header
     fprintf(f, "// made with %s\n", program_name);
     if (base > 0)
         fprintf(f, "// image base 0x%04zx\n", base);
-    if (entry > base)
+    if (entry > 0)
         fprintf(f, "// entry point 0x%04zx\n", entry);
     fprintf(f, "const uint8_t %s_image[%zu] = {\n", program_name, sz);
 
@@ -164,6 +140,7 @@ void dump_c(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
 // main program function
 int main(int argc, char* argv[])
 {
+    opt.filler = UINT8_MAX + 1;
     parse_args(argc, argv);
 
     // open files
@@ -172,26 +149,38 @@ int main(int argc, char* argv[])
         stdout : z_fopen(opt.output, "w");
 
     // read in
+    uint8_t* image;
     size_t sz, base, entry;
-    uint8_t* image = ihex_load8(&sz, &base, &entry, fin);
-    if (image == NULL)
-        z_die("ihex");
+    int fmt_in = ihx_load(&image, &sz, &base, &entry, fin);
+    if (fmt_in < 0)
+        z_die("ihx_load");
 
     // write out
-    switch (opt.fmt) {
+    switch (opt.fmt_out) {
     case 'b':
 #if defined(_O_BINARY)
         _setmode(_fileno(fout), _O_BINARY);
 #endif // _O_BINARY
+        if (opt.filler <= UINT8_MAX)
+            for (size_t i = base; i > 0; --i)
+                putc(opt.filler, fout);
         if (fwrite(image, 1, sz, fout) != sz)
             z_die("fwrite");
     break;
     case 'c':
     case 0:
-        dump_c(image, sz, base, entry, fout);
+        c_dump(image, sz, base, entry, fout);
     break;
     case 'x':
-        dump_hex(image, sz, base, entry, fout);
+        ihx_dump(image, sz, base, entry, opt.filler, opt.wrap, fout);
+    break;
+    case 'i':
+        printf("Format: %s\n", (fmt_in == 'x') ? "Intel HEX" : "Binary");
+        printf("Size: %zu bytes\n", sz);
+        if (fmt_in == 'x') {
+            printf("Address Range: %04zX-%04zX\n", base, base + sz - 1);
+            printf("Entry Point: %04zX\n", entry);
+        }
     break;
     }
 

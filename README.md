@@ -15,11 +15,12 @@ Convert between Intel HEX, Binary and C Include format.
 -b, --binary        Binary dump output
 -c, --c             C Include output
 -x, --hex           Intel HEX format output
+-i, --info          Only show file info
 -o, --output=FILE   Set output file name
+-z, --filler=XX     Suppress consecutive bytes in output
 -p, --padding=NUM   Extra space on line
 -w, --wrap=NUM      Maximum output bytes per line
 -h, --help          Show this message and exit
 
 If no output is given then writes to stdout.
-Intel HEX format is 8-bit only (64KB max).
 ```
