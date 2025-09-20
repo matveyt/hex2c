@@ -14,10 +14,10 @@
 #endif // _WIN32
 #include "ihx.h"
 
-const char program_name[] = "hex2c";
+static const char program_name[] = "hex2c";
 
 // user options
-struct {
+static struct {
     char* input;
     char* output;
     int fmt_out;
@@ -27,7 +27,7 @@ struct {
 } opt = {0};
 
 /*noreturn*/
-void help(void)
+static void help(void)
 {
     fprintf(stdout,
 "Usage: %s [OPTION]... FILE\n"
@@ -48,7 +48,7 @@ void help(void)
     exit(EXIT_SUCCESS);
 }
 
-void parse_args(int argc, char* argv[])
+static void parse_args(int argc, char* argv[])
 {
     static struct option lopts[] = {
         { "binary", no_argument, NULL, 'b' },
@@ -106,7 +106,7 @@ void parse_args(int argc, char* argv[])
 }
 
 // format output as C Include
-void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
+static void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
 {
     // user options
     unsigned wrap = opt.wrap ? opt.wrap : 8;
@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
     case 'i':
         printf("Format: %s\n", (fmt_in == 'x') ? "Intel HEX" : "Binary");
         printf("Size: %zu bytes\n", sz);
-        if (fmt_in == 'x') {
+        if (fmt_in == 'x' && sz > 0) {
             printf("Address Range: %04zX-%04zX\n", base, base + sz - 1);
             printf("Entry Point: %04zX\n", entry);
         }
