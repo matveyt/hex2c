@@ -29,7 +29,7 @@ static struct {
 /*noreturn*/
 static void help(void)
 {
-    fprintf(stdout,
+    printf(
 "Usage: %s [OPTION]... FILE\n"
 "Convert between Intel HEX, Binary and C Include format.\n"
 "\n"
@@ -140,7 +140,7 @@ static void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f
 // main program function
 int main(int argc, char* argv[])
 {
-    opt.filler = UINT8_MAX + 1;
+    opt.filler = UINT8_MAX + 1; // not used
     parse_args(argc, argv);
 
     // open files
@@ -158,9 +158,9 @@ int main(int argc, char* argv[])
     // write out
     switch (opt.fmt_out) {
     case 'b':
-#if defined(_O_BINARY)
+#if defined(_WIN32)
         _setmode(_fileno(fout), _O_BINARY);
-#endif // _O_BINARY
+#endif
         if (opt.filler <= UINT8_MAX)
             for (size_t i = base; i > 0; --i)
                 putc(opt.filler, fout);
