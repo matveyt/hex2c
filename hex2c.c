@@ -7,14 +7,14 @@
 //
 
 #include "stdz.h"
-#include <fcntl.h>
-#include <getopt.h>
 #if defined(_WIN32)
+#include <fcntl.h>
 #include <io.h>
 #endif // _WIN32
 #include "ihx.h"
+#include "ya_getopt.h"
 
-static const char program_name[] = "hex2c";
+const char* z_progname = "hex2c";
 
 // user options
 static struct {
@@ -27,9 +27,12 @@ static struct {
 } opt = {0};
 
 /*noreturn*/
-static void help(void)
+static void usage(int status)
 {
-    printf(
+    if (status != EXIT_SUCCESS)
+        fprintf(stderr, "Try '%s --help' for more information.\n", z_progname);
+    else
+        printf(
 "Usage: %s [OPTION]... FILE\n"
 "Convert between Intel HEX, Binary and C Include format.\n"
 "\n"
@@ -44,8 +47,8 @@ static void help(void)
 "-h, --help         Show this message and exit\n"
 "\n"
 "If no output is given then writes to stdout.\n",
-        program_name);
-    exit(EXIT_SUCCESS);
+        z_progname);
+    exit(status);
 }
 
 static void parse_args(int argc, char* argv[])
@@ -90,19 +93,20 @@ static void parse_args(int argc, char* argv[])
                 opt.wrap = 0;
         break;
         case 'h':
-            help();
+            usage(EXIT_SUCCESS);
         break;
         case '?':
-            fprintf(stderr, "Try '%s --help' for more information.\n", program_name);
-            exit(EXIT_FAILURE);
+            usage(EXIT_FAILURE);
         break;
         }
     }
 
     if (optind == argc - 1)
         opt.input = z_strdup(argv[optind]);
-    else
-        help();
+    else {
+        z_error(0, -1, "missing file name");
+        usage(EXIT_FAILURE);
+    }
 }
 
 // format output as C Include
@@ -113,12 +117,12 @@ static void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f
     unsigned padding = opt.padding ? opt.padding : 4;
 
     // header
-    fprintf(f, "// made with %s\n", program_name);
+    fprintf(f, "// made with %s\n", z_progname);
     if (base > 0)
         fprintf(f, "// image base 0x%04zx\n", base);
     if (entry > 0)
         fprintf(f, "// entry point 0x%04zx\n", entry);
-    fprintf(f, "const uint8_t %s_image[%zu] = {\n", program_name, sz);
+    fprintf(f, "const uint8_t %s_image[%zu] = {\n", z_progname, sz);
 
     for (size_t i = 0; i < sz; i += wrap) {
         // leading space
@@ -153,7 +157,7 @@ int main(int argc, char* argv[])
     size_t sz, base, entry;
     int fmt_in = ihx_load(&image, &sz, &base, &entry, fin);
     if (fmt_in < 0)
-        z_die("ihx_load");
+        z_error(EXIT_FAILURE, errno, "ihx_load");
 
     // write out
     switch (opt.fmt_out) {
@@ -165,7 +169,7 @@ int main(int argc, char* argv[])
             for (size_t i = base; i > 0; --i)
                 putc(opt.filler, fout);
         if (fwrite(image, 1, sz, fout) != sz)
-            z_die("fwrite");
+            z_error(EXIT_FAILURE, errno, "fwrite(%zu)", sz);
     break;
     case 'c':
     case 0:
