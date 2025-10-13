@@ -13,6 +13,8 @@ flags. The source code itself is thought to be C99 portable.
 Usage: hex2c [OPTION]... FILE
 Convert between Intel HEX, Binary and C Include format.
 
+With no FILE, or when FILE is -, write standard output.
+
 -b, --binary        Binary dump output
 -c, --c             C Include output
 -x, --hex           Intel HEX format output
@@ -22,6 +24,4 @@ Convert between Intel HEX, Binary and C Include format.
 -p, --padding=NUM   Extra space on line
 -w, --wrap=NUM      Maximum output bytes per line
 -h, --help          Show this message and exit
-
-If no output is given then writes to stdout.
 ```

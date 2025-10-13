@@ -1,20 +1,19 @@
-PROG = hex2c
-OBJS = hex2c.o ihx.o stdz.o
-
-$(PROG) : $(OBJS)
-hex2c.o : ihx.h stdz.h getopt.h
-ihx.o : ihx.h stdz.h
-stdz.o : stdz.h getopt.h getopt.c
+TARGET = hex2c
+OBJECTS = hex2c.o stdz.o ihx.o
 
 CFLAGS += -O2 -std=c99
 CFLAGS += -Wall -Wextra -Wpedantic -Werror
 LDFLAGS += -s
 MAKEFLAGS += -r
 
-$(PROG) :
-	$(CC) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
+$(TARGET) : $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) $(LDLIBS) -o $@
 %.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 clean :
-	-rm -f $(PROG) *.o
+	-rm -f $(TARGET) $(OBJECTS)
 .PHONY : clean
+
+hex2c.o : stdz.h getopt.h ihx.h
+stdz.o : stdz.h getopt.h getopt.c
+ihx.o : stdz.h ihx.h
