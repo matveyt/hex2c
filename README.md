@@ -20,7 +20,7 @@ With no FILE, or when FILE is -, write standard output.
 -x, --hex           Intel HEX format output
 -i, --info          Only show file info
 -o, --output=FILE   Set output file name
--z, --filler=XX     Suppress consecutive bytes in output
+-z, --filler=X      Default data byte value
 -p, --padding=NUM   Extra space on line
 -w, --wrap=NUM      Maximum output bytes per line
 -h, --help          Show this message and exit

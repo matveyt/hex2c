@@ -42,7 +42,7 @@ static void usage(int status)
 "-x, --hex          Intel HEX format output\n"
 "-i, --info         Only show file info\n"
 "-o, --output=FILE  Set output file name\n"
-"-z, --filler=XX    Suppress consecutive bytes in output\n"
+"-z, --filler=X     Default data byte value\n"
 "-p, --padding=NUM  Extra space on line\n"
 "-w, --wrap=NUM     Maximum output bytes per line\n"
 "-h, --help         Show this message and exit\n",
@@ -117,13 +117,12 @@ int main(int argc, char* argv[])
 
     // open files
     FILE* fin = z_fopen(opt.input, "rb");
-    FILE* fout = (opt.output == NULL || strcmp(opt.output, "-") == 0) ?
-        stdout : z_fopen(opt.output, "w");
+    FILE* fout = z_fopen(opt.output, "w");
 
     // read in
     uint8_t* image;
     size_t sz, base, entry;
-    int fmt_in = ihx_load(&image, &sz, &base, &entry, fin);
+    int fmt_in = ihx_load(&image, &sz, &base, &entry, opt.filler, fin);
     if (fmt_in < 0)
         z_error(EXIT_FAILURE, errno, "ihx_load");
 
