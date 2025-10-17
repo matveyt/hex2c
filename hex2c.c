@@ -105,7 +105,7 @@ static void parse_args(int argc, char* argv[])
     if (z_optind == argc - 1)
         opt.input = z_strdup(argv[z_optind]);
     else {
-        z_warnx(1, "missing file name");
+        z_warnx("missing file name");
         usage(EXIT_FAILURE);
     }
 }
