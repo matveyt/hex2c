@@ -13,7 +13,7 @@
 #endif // _WIN32
 #include "ihx.h"
 
-static void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f);
+static void c_dump(IHX* ihx, FILE* f);
 
 // user options
 static struct {
@@ -120,9 +120,8 @@ int main(int argc, char* argv[])
     FILE* fout = z_fopen(opt.output, "w");
 
     // read in
-    uint8_t* image;
-    size_t sz, base, entry;
-    int fmt_in = ihx_load(&image, &sz, &base, &entry, opt.filler, fin);
+    IHX ihx;
+    int fmt_in = ihx_load(&ihx, opt.filler, fin);
     if (fmt_in < 0)
         z_error(EXIT_FAILURE, errno, "ihx_load");
 
@@ -133,29 +132,29 @@ int main(int argc, char* argv[])
         _setmode(_fileno(fout), _O_BINARY);
 #endif
         if (opt.filler <= UINT8_MAX)
-            for (size_t i = base; i > 0; --i)
-                putc(opt.filler, fout);
-        if (fwrite(image, 1, sz, fout) != sz)
-            z_error(EXIT_FAILURE, errno, "fwrite(%zu)", sz);
+            for (size_t i = ihx.base; i > 0; --i)
+                fputc(opt.filler, fout);
+        if (fwrite(ihx.image, 1, ihx.sz, fout) != ihx.sz)
+            z_error(EXIT_FAILURE, errno, "fwrite(%zu)", ihx.sz);
     break;
     case 'c':
     case 0:
-        c_dump(image, sz, base, entry, fout);
+        c_dump(&ihx, fout);
     break;
     case 'x':
-        ihx_dump(image, sz, base, entry, opt.filler, opt.wrap, fout);
+        ihx_dump(&ihx, opt.filler, opt.wrap, fout);
     break;
     case 'i':
         printf("Format: %s\n", (fmt_in == 'x') ? "Intel HEX" : "Binary");
-        printf("Size: %zu bytes\n", sz);
-        if (fmt_in == 'x' && sz > 0) {
-            printf("Address Range: %04zX-%04zX\n", base, base + sz - 1);
-            printf("Entry Point: %04zX\n", entry);
+        printf("Size: %zu bytes\n", ihx.sz);
+        if (fmt_in == 'x' && ihx.sz > 0) {
+            printf("Address Range: %04zX-%04zX\n", ihx.base, ihx.base + ihx.sz - 1);
+            printf("Entry Point: %04zX\n", ihx.entry);
         }
     break;
     }
 
-    free(image);
+    free(ihx.image);
     fclose(fout);
     fclose(fin);
     free(opt.output);
@@ -164,7 +163,7 @@ int main(int argc, char* argv[])
 }
 
 // write C Include output file
-void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
+void c_dump(IHX* ihx, FILE* f)
 {
     // user options
     unsigned wrap = opt.wrap ? opt.wrap : 8;
@@ -172,23 +171,23 @@ void c_dump(uint8_t* image, size_t sz, size_t base, size_t entry, FILE* f)
 
     // header
     fprintf(f, "// made with %s\n", z_getprogname());
-    if (base > 0)
-        fprintf(f, "// image base 0x%04zx\n", base);
-    if (entry > 0)
-        fprintf(f, "// entry point 0x%04zx\n", entry);
-    fprintf(f, "const unsigned char image[%zu] = {\n", sz);
+    if (ihx->base > 0)
+        fprintf(f, "// image base %#04zx\n", ihx->base);
+    if (ihx->entry > 0)
+        fprintf(f, "// entry point %#04zx\n", ihx->entry);
+    fprintf(f, "const unsigned char image[%zu] = {\n", ihx->sz);
 
-    for (size_t i = 0; i < sz; i += wrap) {
+    for (size_t i = 0; i < ihx->sz; i += wrap) {
         // leading space
         fprintf(f, "%*c", padding, ' ');
 
         // data
-        unsigned cb = min(wrap, sz - i);
+        unsigned cb = min(wrap, ihx->sz - i);
         for (unsigned j = 0; j < cb; ++j)
-            fprintf(f, "0x%02x, ", image[i + j]);
+            fprintf(f, "%#02x, ", ihx->image[i + j]);
 
         // trailing space
-        fprintf(f, "%*c// %03zx\n", (wrap - cb) * 6 - 1 + padding, ' ', base + i);
+        fprintf(f, "%*c// %03zx\n", (wrap - cb) * 6 - 1 + padding, ' ', ihx->base + i);
     }
 
     // footer
