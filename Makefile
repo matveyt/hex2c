@@ -1,8 +1,8 @@
 TARGET = hex2c
-OBJECTS = hex2c.o stdz.o ihx.o
+OBJECTS = hex2c.o ihx.o stdz.o
 
 CFLAGS += -O2 -std=c99
-CFLAGS += -Wall -Wextra -Wpedantic -Werror
+CFLAGS += -Wall -Wextra -Werror -Wpedantic
 LDFLAGS += -s
 MAKEFLAGS += -r
 
@@ -14,6 +14,7 @@ clean :
 	-rm -f $(TARGET) $(OBJECTS)
 .PHONY : clean
 
-hex2c.o : stdz.h getopt.h ihx.h
-stdz.o : stdz.h getopt.h getopt.c
-ihx.o : stdz.h ihx.h
+# !!gcc -MM *.c
+hex2c.o: hex2c.c stdz.h getopt.h ihx.h
+ihx.o: ihx.c ihx.h stdz.h getopt.h
+stdz.o: stdz.c stdz.h getopt.h getopt.c
